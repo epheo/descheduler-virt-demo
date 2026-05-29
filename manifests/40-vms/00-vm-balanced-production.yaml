@@ -31,7 +31,7 @@ spec:
       evictionStrategy: LiveMigrate
       domain:
         cpu:
-          cores: 1
+          cores: 2
         # Use spec.domain.memory.guest (not resources.requests.memory) so this
         # VM stays compatible with memory-overcommit / higher-density configs.
         memory:
