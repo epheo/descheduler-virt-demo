@@ -1,0 +1,65 @@
+---
+# Initial placement: node affinity (required + preferred).
+#
+# DRS analog: VM-to-Host affinity combining a hard rule ("must run on hosts in
+# group X") with a soft preference ("should prefer hosts with more CPU").
+#
+#   required  -> must land on a node labeled vm-zone in (gold, silver)
+#   preferred -> among those, prefer nodes labeled cpu-class=high (weight 50);
+#                if none exist the VM still schedules.
+#
+# Affinity rules apply only at scheduling time. OpenShift does not move a running
+# VM if the node later stops matching — that continuous correction is the
+# descheduler's job (see 20-descheduler).
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-node-affinity
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-node-affinity
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/vm-zone
+                    operator: In
+                    values:
+                      - gold
+                      - silver
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 50
+              preference:
+                matchExpressions:
+                  - key: cpu-class
+                    operator: In
+                    values:
+                      - high
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest

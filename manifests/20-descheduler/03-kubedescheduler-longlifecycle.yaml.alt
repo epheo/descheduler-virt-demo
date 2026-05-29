@@ -1,0 +1,27 @@
+# Fallback descheduler config (the .alt extension means it is not applied).
+#
+# Use this instead of 03-kubedescheduler-drs.yaml when you cannot enable PSI on
+# workers (KubeVirtRelieveAndMigrate requires it) or want the longest-standing,
+# fully stable Virt descheduler profile.
+#
+# LongLifecycle balances node utilization without the load-aware/soft-taint
+# extras: a node is under-utilized below 20% and over-utilized above 50% (CPU,
+# memory, or pod count). VMs are evicted from over-utilized nodes and the
+# scheduler picks a cooler destination, so the VM live-migrates.
+#
+# To use it, rename to .yaml and remove 03-kubedescheduler-drs.yaml so only one
+# KubeDescheduler "cluster" object exists.
+apiVersion: operator.openshift.io/v1
+kind: KubeDescheduler
+metadata:
+  name: cluster
+  namespace: openshift-kube-descheduler-operator
+spec:
+  managementState: Managed
+  mode: Automatic
+  deschedulingIntervalSeconds: 60
+  profiles:
+    - LongLifecycle
+  evictionLimits:
+    node: 2
+    total: 5

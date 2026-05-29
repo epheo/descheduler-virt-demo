@@ -1,0 +1,12 @@
+---
+# Namespace that hosts all demo virtual machines.
+# Kept separate from openshift-* so the descheduler is allowed to act on it
+# (protected namespaces openshift-*, kube-system and hypershift are never evicted).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: virt-drs-demo
+  labels:
+    kubevirt.io/demo: "drs-scheduling"
+    # Enable workload monitoring for the demo namespace so VM metrics show up.
+    openshift.io/cluster-monitoring: "true"

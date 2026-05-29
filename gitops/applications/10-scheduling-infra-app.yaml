@@ -1,0 +1,26 @@
+---
+# Wave 0: cluster prerequisites (demo namespace + PSI MachineConfig).
+# PSI must exist before the load-aware descheduler can work; doing it first also
+# gets the worker reboot out of the way early.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: virt-demo-scheduling-infra
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/epheo/descheduler-virt-demo.git   # canonical repo — change if you fork
+    targetRevision: main
+    # Each Application owns one directory; namespaces live in 00-namespaces.
+    path: manifests/10-scheduling-infra
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

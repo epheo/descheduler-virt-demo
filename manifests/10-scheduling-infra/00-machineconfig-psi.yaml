@@ -1,0 +1,19 @@
+---
+# PSI (Pressure Stall Information) kernel argument for worker nodes.
+#
+# The KubeVirtRelieveAndMigrate descheduler profile is load-aware: it uses each
+# node's real CPU/memory pressure (PSI) to decide which nodes are hot and should
+# shed load via live migration. Without psi=1 it cannot work.
+#
+# The name must sort after any 98-* MachineConfig (which disables PSI), so the
+# 99- prefix ensures psi=1 wins. Note: applying this reboots the worker pool.
+# See manifests/10-scheduling-infra/README.md.
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 99-openshift-machineconfig-worker-psi-karg
+spec:
+  kernelArguments:
+    - psi=1

@@ -1,0 +1,22 @@
+---
+# Live migration policy: apply a faster migration profile to VMs labeled
+# "production" so they rebalance and evacuate quickly.
+#
+# Selection is by labels: all labels on the policy must match the VM (via its VMI
+# labels) and/or its namespace. If several policies match, the one with the most
+# matching labels wins.
+#
+# This pairs with the descheduler: when rebalancing evicts a production VM, this
+# policy governs how its live migration runs.
+apiVersion: migrations.kubevirt.io/v1alpha1
+kind: MigrationPolicy
+metadata:
+  name: production-fast-migration
+spec:
+  selectors:
+    # Matches VMs whose VMI carries kubevirt.io/environment: production
+    virtualMachineInstanceSelector:
+      kubevirt.io/environment: "production"
+  # Allow post-copy so heavy/busy production guests still converge.
+  allowPostCopy: true
+  allowAutoConverge: true

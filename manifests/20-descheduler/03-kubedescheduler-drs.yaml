@@ -1,0 +1,48 @@
+---
+# KubeDescheduler "cluster" — the OpenShift equivalent of vSphere DRS in Fully
+# Automated mode. It watches node load and live-migrates running VMs off hot
+# nodes to keep spare capacity even across the cluster.
+#
+# Requires PSI on workers (see manifests/10-scheduling-infra) and live-migratable
+# VMs. For the full DRS mapping see docs/00-concepts.md and docs/02-descheduler-drs.md.
+apiVersion: operator.openshift.io/v1
+kind: KubeDescheduler
+metadata:
+  name: cluster
+  namespace: openshift-kube-descheduler-operator
+spec:
+  managementState: Managed
+
+  # Automation level. Predictive is a dry-run (logs what would migrate, moves
+  # nothing); Automatic evicts so VMs live-migrate to rebalance. Demo tip: start
+  # in Predictive, then switch to Automatic.
+  mode: Automatic
+
+  # How often the descheduler re-evaluates the cluster (DRS invocation period).
+  # 30s is short, for a live demo; production typically 60-3600s.
+  deschedulingIntervalSeconds: 30
+
+  profiles:
+    # Virt-specific, load-aware profile: evicts pods from hot nodes and rebalances
+    # so nodes keep similar spare capacity. An enhanced LongLifecycle.
+    - KubeVirtRelieveAndMigrate
+
+  profileCustomizations:
+    # Decide on real measured CPU load rather than pod resource requests.
+    devActualUtilizationProfile: PrometheusCPUCombined
+
+    # Treat a node busier than average as "hot". AsymmetricLow (0%:10%) only flags
+    # over-utilized nodes (10% above average) and never over-drains an idle node.
+    # Do not combine with devLowNodeUtilizationThresholds.
+    devDeviationThresholds: AsymmetricLow
+
+    # Apply soft (PreferNoSchedule) taints to hot nodes so the scheduler also
+    # stops placing new VMs there, closing the loop with initial placement.
+    devEnableSoftTainter: true
+
+  # Max concurrent migrations. Keep at or below the HyperConverged live-migration
+  # limits (manifests/30-live-migration) so the descheduler never queues more
+  # migrations than the cluster will run.
+  evictionLimits:
+    node: 2    # matches parallelOutboundMigrationsPerNode in HCO
+    total: 5   # matches parallelMigrationsPerCluster in HCO

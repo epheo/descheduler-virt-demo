@@ -1,0 +1,105 @@
+---
+# HA spread: pod anti-affinity (a "keep VMs apart" rule).
+#
+# DRS analog: a "Separate Virtual Machines" anti-affinity rule. These two VMs
+# form an HA pair (two replicas of an app) and must not share a node, so a single
+# node failure cannot take out both.
+#
+# Pod (anti-)affinity works for VMs because a VirtualMachine runs as a Pod (the
+# virt-launcher). topologyKey kubernetes.io/hostname means "per node".
+#
+# The required form is hard: if the only candidate already runs the peer, the
+# second VM stays Pending. Use the preferred form for soft spreading.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-ha-a
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+    ha-group: db-cluster
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-ha-a
+        ha-group: db-cluster
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: ha-group
+                    operator: In
+                    values:
+                      - db-cluster
+              topologyKey: kubernetes.io/hostname
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-ha-b
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+    ha-group: db-cluster
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-ha-b
+        ha-group: db-cluster
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: ha-group
+                    operator: In
+                    values:
+                      - db-cluster
+              topologyKey: kubernetes.io/hostname
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest

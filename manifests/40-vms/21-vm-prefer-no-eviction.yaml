@@ -1,0 +1,54 @@
+---
+# Exclude from rebalancing: prefer-no-eviction annotation.
+#
+# DRS analog: keeping a VM live-migratable for maintenance (a node drain still
+# moves it) while telling the automatic load balancer to leave it alone.
+#
+# Difference vs evictionStrategy: None
+#   evictionStrategy: None                         -> never migrated by anything
+#                                                     (blocks node drains)
+#   descheduler.alpha.kubernetes.io/prefer-no-eviction
+#     + evictionStrategy: LiveMigrate (default)    -> the descheduler skips it,
+#                                                     but a node drain/upgrade
+#                                                     still live-migrates it.
+#
+# Only the presence of the annotation matters; the value is not evaluated. It is
+# applied dynamically and propagates to the VMI and virt-launcher pod with no
+# restart.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-no-rebalance
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-no-rebalance
+      annotations:
+        descheduler.alpha.kubernetes.io/prefer-no-eviction: "true"
+    spec:
+      evictionStrategy: LiveMigrate
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest

@@ -1,0 +1,33 @@
+---
+# Wave 2: the demo virtual machines. Deployed last so the namespace,
+# descheduler, and live-migration config are all in place first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: virt-demo-vms
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/epheo/descheduler-virt-demo.git   # canonical repo — change if you fork
+    targetRevision: main
+    path: manifests/40-vms
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: virt-drs-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+  # KubeVirt mutates VirtualMachine specs (firmware UUID, default volumes, etc.).
+  # Without this, Argo would show VMs permanently OutOfSync.
+  ignoreDifferences:
+    - group: kubevirt.io
+      kind: VirtualMachine
+      jqPathExpressions:
+        - '.spec.template.spec.domain.firmware'
+        - '.spec.template.spec.volumes[].containerDisk.imagePullPolicy'

@@ -1,0 +1,69 @@
+---
+# Baseline demo VM — the balanced workload the descheduler manages.
+#
+# - Default evictionStrategy LiveMigrate (from HyperConverged): a descheduler
+#   eviction live-migrates this guest instead of stopping it.
+# - Labeled kubevirt.io/environment: production so the production MigrationPolicy
+#   applies when it is rebalanced.
+# - No nodeSelector/affinity, so the scheduler and descheduler can place and move
+#   it freely — an ideal load-balancing candidate.
+#
+# Scale it out with scripts/generate-load.sh to create node pressure and watch
+# the descheduler rebalance VMs.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-balanced-01
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+    kubevirt.io/environment: production
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-balanced-01
+        # VMI-level label that MigrationPolicy selectors match on.
+        kubevirt.io/environment: production
+    spec:
+      # Default for multi-node clusters; spelled out here for the demo.
+      evictionStrategy: LiveMigrate
+      domain:
+        cpu:
+          cores: 1
+        # Use spec.domain.memory.guest (not resources.requests.memory) so this
+        # VM stays compatible with memory-overcommit / higher-density configs.
+        memory:
+          guest: 2Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+        resources: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              password: fedora
+              chpasswd: { expire: False }
+              packages:
+                - stress-ng
+              # Uncomment the runcmd below to make this VM burn CPU on boot so
+              # it generates real PSI load for the load-aware descheduler.
+              # runcmd:
+              #   - [ "bash", "-c", "stress-ng --cpu 1 --timeout 3600s &" ]

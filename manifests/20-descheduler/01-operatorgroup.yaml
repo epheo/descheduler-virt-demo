@@ -1,0 +1,11 @@
+---
+# OperatorGroup scopes the Kube Descheduler Operator to its own namespace
+# (own-namespace install mode), matching the web console install flow.
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-kube-descheduler-operator
+  namespace: openshift-kube-descheduler-operator
+spec:
+  targetNamespaces:
+    - openshift-kube-descheduler-operator

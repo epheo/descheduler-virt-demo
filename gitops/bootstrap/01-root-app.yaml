@@ -1,0 +1,26 @@
+---
+# App-of-apps root. Apply this single Application once; it makes Argo CD manage
+# every child Application under gitops/applications/, which in turn deploy
+# manifests/. repoURL points at the canonical repo; edit it only if you fork.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: virt-drs-demo-root
+  namespace: openshift-gitops
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/epheo/descheduler-virt-demo.git   # canonical repo — change if you fork
+    targetRevision: main
+    path: gitops/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

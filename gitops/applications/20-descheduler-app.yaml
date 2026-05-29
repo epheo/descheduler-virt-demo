@@ -1,0 +1,40 @@
+---
+# Wave 1: the DRS engine -- Kube Descheduler Operator + KubeDescheduler CR.
+# Runs after PSI so the load-aware profile has its signal.
+#
+# The operator install (Subscription) and the KubeDescheduler CR are in the same
+# directory. If Argo races (CR applied before the CRD is registered), it
+# self-heals on the next sync; SkipDryRunOnMissingResource avoids a hard error.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: virt-demo-descheduler
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/epheo/descheduler-virt-demo.git   # canonical repo — change if you fork
+    targetRevision: main
+    path: manifests/20-descheduler
+    directory:
+      # Ignore the .alt fallback file; only apply real .yaml manifests.
+      include: '*.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true
+  # Don't fight the operator over fields it defaults on the KubeDescheduler CR.
+  ignoreDifferences:
+    - group: operator.openshift.io
+      kind: KubeDescheduler
+      jsonPointers:
+        - /spec/operatorLogLevel
+        - /spec/logLevel

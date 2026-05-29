@@ -1,0 +1,46 @@
+---
+# Initial placement: nodeSelector (hard pin).
+#
+# DRS analog: a "must run on hosts" VM-to-Host affinity rule (required). The VM
+# only schedules onto nodes carrying both labels; if none match, it stays Pending.
+#
+# Label a node first, e.g.:
+#   oc label node <node> node-role.kubernetes.io/vm-zone=gold
+#   oc label node <node> disktype=ssd
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-nodeselector
+  namespace: virt-drs-demo
+  labels:
+    app: drs-demo
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-nodeselector
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/vm-zone: gold
+        disktype: ssd
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest

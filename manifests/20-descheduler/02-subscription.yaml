@@ -1,0 +1,16 @@
+---
+# Installs the Kube Descheduler Operator from the Red Hat operator catalog.
+# This is the operator that, on OpenShift Virtualization, provides DRS-style
+# continuous rebalancing by live-migrating VMs between worker nodes.
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-kube-descheduler-operator
+  namespace: openshift-kube-descheduler-operator
+spec:
+  channel: stable
+  name: cluster-kube-descheduler-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Auto-approve so GitOps can install without a manual InstallPlan approval.
+  installPlanApproval: Automatic

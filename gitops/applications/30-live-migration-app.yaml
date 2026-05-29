@@ -1,0 +1,31 @@
+---
+# Wave 1: live migration policy (MigrationPolicy is its own CR -- safe to own).
+#
+# Note: the HyperConverged liveMigrationConfig is intentionally not managed here.
+# The HCO object is owned by the OpenShift Virtualization operator and must be
+# patched, not replaced — apply 30-live-migration/*.patch with `oc patch` (see
+# scripts/demo-up.sh). Only the standalone MigrationPolicy is GitOps-owned.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: virt-demo-live-migration
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/epheo/descheduler-virt-demo.git   # canonical repo — change if you fork
+    targetRevision: main
+    path: manifests/30-live-migration
+    directory:
+      # Only the MigrationPolicy is a real .yaml; the HCO file is a .patch.
+      include: '*.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

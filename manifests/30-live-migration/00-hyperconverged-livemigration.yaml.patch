@@ -1,0 +1,28 @@
+# Live-migration tuning for the HyperConverged CR. Live migration is the
+# mechanism the descheduler drives: when it evicts a VM's virt-launcher pod,
+# KubeVirt live-migrates the guest instead of stopping it.
+#
+# The HyperConverged CR is owned by the OpenShift Virtualization operator, so
+# these fields are applied as a strategic-merge patch (via demo-up.sh) rather
+# than from Argo CD — see docs/04-gitops.md. Keep parallelMigrationsPerCluster /
+# parallelOutboundMigrationsPerNode in sync with the descheduler evictionLimits.
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  name: kubevirt-hyperconverged
+  namespace: openshift-cnv
+spec:
+  # Cluster-wide default eviction strategy. LiveMigrate means a node drain
+  # (maintenance or descheduler eviction) live-migrates the VM rather than
+  # stopping it — what makes rebalancing non-disruptive.
+  evictionStrategy: LiveMigrate
+
+  liveMigrationConfig:
+    # Cap migration bandwidth so a rebalancing storm cannot saturate the
+    # network. 0 = unlimited. 64Mi is a safe demo value.
+    bandwidthPerMigration: 64Mi
+    completionTimeoutPerGiB: 800
+    parallelMigrationsPerCluster: 5      # <-> descheduler evictionLimits.total
+    parallelOutboundMigrationsPerNode: 2 # <-> descheduler evictionLimits.node
+    progressTimeout: 150
+    allowPostCopy: false
